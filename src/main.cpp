@@ -57,6 +57,27 @@ void loadTelescope() {
     if (!warn.empty()) std::cout << "WARN: " << warn << std::endl;
     if (!err.empty()) std::cerr << "ERR: " << err << std::endl;
     if (!ret) exit(1);
+    
+    // Print material information for debugging
+    std::cout << "\n=== TELESCOPE MATERIALS LOADED ===" << std::endl;
+    std::cout << "Total materials: " << materials.size() << std::endl;
+    for (size_t i = 0; i < materials.size(); i++) {
+        std::cout << "\nMaterial " << i << ": " << materials[i].name << std::endl;
+        std::cout << "  Diffuse (Kd): (" 
+                  << materials[i].diffuse[0] << ", "
+                  << materials[i].diffuse[1] << ", "
+                  << materials[i].diffuse[2] << ")" << std::endl;
+        std::cout << "  Ambient (Ka): ("
+                  << materials[i].ambient[0] << ", "
+                  << materials[i].ambient[1] << ", "
+                  << materials[i].ambient[2] << ")" << std::endl;
+        std::cout << "  Specular (Ks): ("
+                  << materials[i].specular[0] << ", "
+                  << materials[i].specular[1] << ", "
+                  << materials[i].specular[2] << ")" << std::endl;
+        std::cout << "  Shininess (Ns): " << materials[i].shininess << std::endl;
+    }
+    std::cout << "==================================\n" << std::endl;
 }
 
 // ----------------------
@@ -66,8 +87,9 @@ void drawTelescope() {
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_COLOR_MATERIAL);
-    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    
+    // DISABLE color material to let material properties work
+    glDisable(GL_COLOR_MATERIAL);
 
     glPushMatrix();
         // Position telescope as centerpiece with user-controlled parameters
@@ -82,53 +104,62 @@ void drawTelescope() {
                 int fv = shape.mesh.num_face_vertices[f];
                 int matID = shape.mesh.material_ids[f];
                 
-                // Set material properties with MAXIMUM visibility boost
+                // Set material properties with EXTREME visibility boost
                 if (matID >= 0 && matID < materials.size()) {
                     tinyobj::material_t mat = materials[matID];
                     
-                    // EXTREME color amplification (5-6x) with emission
+                    // Reset emission first
+                    GLfloat noEmission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+                    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, noEmission);
+                    
+                    // SUPER amplified colors (8-10x for visibility!)
                     GLfloat ambient[] = {
-                        mat.ambient[0] * 3.0f, 
-                        mat.ambient[1] * 3.0f, 
-                        mat.ambient[2] * 3.0f, 
+                        mat.ambient[0] * 4.0f, 
+                        mat.ambient[1] * 4.0f, 
+                        mat.ambient[2] * 4.0f, 
                         1.0f
                     };
                     GLfloat diffuse[] = {
-                        mat.diffuse[0] * 5.0f, 
-                        mat.diffuse[1] * 5.0f, 
-                        mat.diffuse[2] * 5.0f, 
+                        mat.diffuse[0] * 10.0f, 
+                        mat.diffuse[1] * 10.0f, 
+                        mat.diffuse[2] * 10.0f, 
                         1.0f
                     };
                     GLfloat specular[] = {
-                        mat.specular[0] * 4.0f, 
-                        mat.specular[1] * 4.0f, 
-                        mat.specular[2] * 4.0f, 
+                        mat.specular[0] * 6.0f, 
+                        mat.specular[1] * 6.0f, 
+                        mat.specular[2] * 6.0f, 
                         1.0f
                     };
-                    // ADD EMISSION - makes material self-luminous!
+                    // Strong emission for self-illumination
                     GLfloat emission[] = {
-                        mat.diffuse[0] * 0.8f,
-                        mat.diffuse[1] * 0.8f,
-                        mat.diffuse[2] * 0.8f,
+                        mat.diffuse[0] * 2.0f,
+                        mat.diffuse[1] * 2.0f,
+                        mat.diffuse[2] * 2.0f,
                         1.0f
                     };
-                    GLfloat shininess = mat.shininess > 0 ? mat.shininess * 1.5f : 80.0f;
+                    GLfloat shininess = mat.shininess > 0 ? mat.shininess * 0.5f : 50.0f;
                     
                     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
                     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
                     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular);
-                    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, emission);  // <-- NEW!
+                    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, emission);
                     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
-                    
-                    // Force color
-                    glColor3f(diffuse[0], diffuse[1], diffuse[2]);
                 } else {
-                    // Default material (bright)
+                    // Default material (bright white)
+                    GLfloat noEmission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+                    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, noEmission);
+                    
+                    GLfloat defaultAmbient[] = {0.8f, 0.8f, 0.8f, 1.0f};
                     GLfloat defaultDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
-                    GLfloat defaultEmission[] = {0.3f, 0.3f, 0.3f, 1.0f};
+                    GLfloat defaultSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+                    GLfloat defaultEmission[] = {0.5f, 0.5f, 0.5f, 1.0f};
+                    
+                    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, defaultAmbient);
                     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, defaultDiffuse);
+                    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, defaultSpecular);
                     glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, defaultEmission);
-                    glColor3f(1.0f, 1.0f, 1.0f);
+                    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 50.0f);
                 }
 
                 glBegin(GL_TRIANGLES);
